@@ -2,9 +2,11 @@ const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
+// Прокси для POST-запросов OpenAI chat
 app.post('/v1/chat/completions', async (req, res) => {
   try {
     const apiKey = req.headers['authorization']?.replace('Bearer ', '');
