@@ -6,29 +6,39 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Прокси для POST-запросов OpenAI chat
-app.post('/v1/chat/completions', async (req, res) => {
+// Универсальный прокси для всех методов и любых путей под /v1/
+app.use('/v1/', async (req, res) => {
   try {
     const apiKey = req.headers['authorization']?.replace('Bearer ', '');
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      req.body,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-      }
-    );
-    res.json(response.data);
+    if (!apiKey) {
+      return res.status(401).json({error: 'Missing Authorization header'});
+    }
+
+    const url = `https://api.openai.com${req.originalUrl}`;
+    const axiosConfig = {
+      method: req.method,
+      url: url,
+      headers: {
+        ...req.headers, // Пробрасываем все оригинальные заголовки (можно сузить)
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      data: req.body,
+      params: req.query,
+      validateStatus: () => true, // Возвращаем любые коды ответа (в том числе 4xx, 5xx)
+    };
+
+    const response = await axios(axiosConfig);
+    res.status(response.status).json(response.data);
   } catch (error) {
-    res.status(500).json({
+    res.status(error.response?.status || 500).json({
       error: error.toString(),
       details: error.response?.data,
     });
   }
 });
 
+// Пинг для проверки статуса сервера
 app.get('/', (req, res) => res.send('OpenAI Proxy server is running.'));
 
 const PORT = process.env.PORT || 3000;
