@@ -1,3 +1,5 @@
+console.log("Node.js version:", process.version);
+
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
